@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+function n2ng () {
+    id=`id --user --name`
+    printf "ISP Server: %-20sISP Admin: %-21sISP Domain: %s\n"  $1 $2 $3
+    echo "----------                      ---------                       ----------"
+    /usr/bin/rm -f ~/tmp/NODES ~/tmp/NODEGROUPS
+    /usr/bin/dsmadmc    -se=${2}_${1} \
+                        -id=${2} \
+                        -pa=`/home/${id}/.isp/bin/password_stash.raku --stash-path=/home/${id}/.isp/admin/${1}/${2}.khph` \
+                        -dataonly=yes \
+                        -displaymode=list \
+                        "SELECT NODE_NAME from NODES where DOMAIN_NAME='${3}'"  \
+                        | awk '$1 ~ /^NODE_NAME:/ {print $2}' \
+                        | sort \
+                        > ~/tmp/NODES
+    /usr/bin/dsmadmc    -se=${2}_${1} \
+                        -id=${2} \
+                        -pa=`/home/${id}/.isp/bin/password_stash.raku --stash-path=/home/${id}/.isp/admin/${1}/${2}.khph` \
+                        -dataonly=yes \
+                        -displaymode=list \
+                        "SELECT NODE_NAME from NODEGROUP where NODEGROUP_NAME='${3}'" \
+                        | awk '$1 ~ /^NODE_NAME:/ {print $2}' \
+                        | sed 's/,/\n/g' \
+                        | sort \
+                        > ~/tmp/NODEGROUPS
+    diff -y ~/tmp/NODES ~/tmp/NODEGROUPS
+    rm -f ~/tmp/NODES ~/tmp/NODEGROUPS
+}
+
+if [[ -z $1 || -z $2 || -z $3 ]]  ; then echo "$0 <ISP-server> <ISP-admin> <DOMAIN/NODEGROUP>" && exit 1 ; fi
+n2ng $1 $2 $3
